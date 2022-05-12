@@ -275,7 +275,7 @@ def backend_categorical_crossentropy(target, output, path_distance, path_metadat
       output = tf.convert_to_tensor(output)
       target.shape.assert_is_compatible_with(output.shape)
       
-      g2d = get_genera2distance(path_distance, data_type = tf.float)
+      g2d = get_genera2distance(path_distance, data_type = tf.float32)
       l2g = get_taxonID2genus_from_df(path_metadata, keycol ="scientificName", valcol ="genus")
 
       target_labels = tf.argmax(target, axis = 1, output_type = tf.int32)
