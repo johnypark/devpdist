@@ -232,10 +232,28 @@ def get_genera2distance(DistanceFilename, data_type):
 			tf.constant(list(distance.keys()), dtype = tf.string), 
 			tf.constant(list(distance.values()), dtype = data_type)
 			),
-		default_value = 0.0
+		default_value = -1
 		)
 	return genera2distance
 
+
+def get_distance_from_two_classes(TrueClass, PredClass, LOOKUPTB):
+    if TrueClass.dtype is not tf.string:
+      TrueClass = tf.strings.as_string(TrueClass)
+    if PredClass.dtype is not tf.string:
+      PredClass = tf.strings.as_string(PredClass)
+    return tf.math.maximum(
+			LOOKUPTB.lookup(tf.strings.reduce_join(
+				axis = -1,
+				inputs = tf.stack([TrueClass, PredClass], axis = 1),
+				separator = ' <=> '
+			)),
+			LOOKUPTB.lookup(tf.strings.reduce_join(
+				axis = -1,
+				inputs = tf.stack([PredClass, TrueClass], axis = 1),
+				separator = ' <=> '
+			))
+      )
 
 def get_class2genus(ls_class, ls_genus):
     class2genus = tf.lookup.StaticHashTable( ### taxonID => Genus
@@ -280,10 +298,10 @@ def backend_categorical_crossentropy(target, output, map_genus_to_distance, map_
       g2d = map_genus_to_distance
       target_labels = tf.argmax(target, axis = 1, output_type = tf.int32)
       output_labels = tf.argmax(output, axis = 1, output_type = tf.int32)
-      pdist_weight = g2d[
-                         get_key_for_g2d(l2g[target_labels],
-                                          l2g[output_labels])
-                        ]
+      pdist_weight =  get_distance_from_two_classes(
+                      TrueClass = l2g[target_labels],
+                      PredClass = l2g[output_labels],
+                      LOOKUPTB = g2d)
       pdist_weight = expand_weight_range(pdist_weight, weight_range)
 
       if hasattr(output, '_keras_logits'):
